@@ -13,6 +13,9 @@ In fact, this should work for any output with lines matching `^\[\s*\d+%\]`.
     build_technology make 2>&1 | cmakebar -o
     cat cmake.log | cmakebar --replay
 
+My local cmake script is called `build_technology`.  Your mileage may vary.
+
+
 ### Options:
     
     -help=false: show help
@@ -32,7 +35,7 @@ In fact, this should work for any output with lines matching `^\[\s*\d+%\]`.
 ```
 go build cmakebar.go
 ./cmakebar --help
-cat cmake_test.log | ./cmakebar --replay
+cat cmake.log | ./cmakebar --replay
 ```
 
 The `--replay` option just adds a little sleep delay so that
