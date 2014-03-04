@@ -18,11 +18,14 @@ My local cmake script is called `build_technology`.  Your mileage may vary.
 
 ### Options:
     
-    -help=false: show help
-    -o=false: log output to file [default: cmake.log]
-    -out="": log to file name
-    -r=false: add sleep delays for replay (shortcut)
-    -replay=false: add sleep delays for replay
+    -help=false   : show help
+    -est=false    : show estimated time remaining
+    -e=false      : show estimated time remaining (shortcut)
+    -out=""       : log to file name
+    -o=false      : log output to file [default: cmake.log]
+    -replay=false : add sleep delays for replay
+    -r=false      : add sleep delays for replay (shortcut)
+
 
 ### Todo:
 - [ ] Color/style options

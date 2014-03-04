@@ -41,13 +41,15 @@ const (
 )
 
 var logFile string
-var logOutput, showHelp, replay bool
+var logOutput, showEst, showHelp, replay bool
 
 func init() {
     flag.BoolVar(&showHelp, "help", false, "show help")
     flag.BoolVar(&logOutput, "o", false, "log output to file [default: cmake.log]")
     flag.BoolVar(&replay, "replay", false, "add sleep delays for replay")
     flag.BoolVar(&replay, "r", false, "add sleep delays for replay (shortcut)")
+    flag.BoolVar(&showEst, "est", false, "show estimated time remaining")
+    flag.BoolVar(&showEst, "e", false, "show estimated time remaining (shortcut")
     flag.StringVar(&logFile, "out", "", "log to file name")
 }
 
@@ -179,10 +181,21 @@ func durationString(d time.Duration) string {
 
 func progress(current, total, cols int, elapsed time.Duration) string {
     var line string
-    prefix := fmt.Sprintf(" %d%%", int(100.0 * float32(current) / float32(total)))
+    percent := int(100.0 * float32(current) / float32(total))
+    prefix := fmt.Sprintf(" %d%%", percent)
     postfix := durationString(elapsed)
     bar_start := " ["
     bar_end := "] "
+    if showEst {
+        if percent >  0 {
+            estRemaining := time.Duration(100 * int(elapsed) / percent) - elapsed
+            if estRemaining > 0 {
+                postfix = durationString(estRemaining)
+            } else {
+                postfix = ""
+            }
+        }
+    }
 
     bar_size := cols - len(prefix + bar_start + bar_end + postfix)
     amount := int(float32(current) / (float32(total) / float32(bar_size)))
