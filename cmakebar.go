@@ -38,10 +38,14 @@ import (
 
 const (
     DEFAULT_WIDTH = 20 // it should never come to this
+    SMOOTHING_FACTOR = 0.5
 )
 
 var logFile string
 var logOutput, showEst, showHelp, replay bool
+var ema float32
+var prevPercent int
+var prevElapsed time.Duration
 
 func init() {
     flag.BoolVar(&showHelp, "help", false, "show help")
@@ -179,6 +183,29 @@ func durationString(d time.Duration) string {
     return f
 }
 
+func calcLinearAverageSpeed(percent int, elapsed time.Duration) float32 {
+    return float32(percent) / float32(elapsed)
+}
+
+// EMA = Exponential Moving Average
+// TODO: This is horrible estimate. It's probably better to keep an array
+// of 100 m values and return the median. Or at least weight the EMA against
+// the moving median.
+func calcEMASpeed(percent int, elapsed time.Duration) float32 {
+    if percent == prevPercent {
+        return ema
+    }
+    // Exponential Moving Average
+    // m_e = SF * m_t + (1 - SF) * m_e
+    // SF : smothing factor where 0 < SF < 1
+    // m_e : exponential moving average
+    // m_t : current rate of change or speed
+    mt := float32(percent - prevPercent) / float32(elapsed - prevElapsed)
+    // fmt.Println("percent:", percent, "prevPercent:", prevPercent)
+    ema = SMOOTHING_FACTOR * mt + (1 - SMOOTHING_FACTOR) * ema
+    return ema
+}
+
 func progress(current, total, cols int, elapsed time.Duration) string {
     var line string
     percent := int(100.0 * float32(current) / float32(total))
@@ -186,9 +213,14 @@ func progress(current, total, cols int, elapsed time.Duration) string {
     postfix := durationString(elapsed)
     bar_start := " ["
     bar_end := "] "
+    m := calcLinearAverageSpeed(percent, elapsed)
+    // m := calcEMASpeed(percent, elapsed)
+    // fmt.Println("mLin:", m)
+    // fmt.Println("mEma:", m2)
     if showEst {
         if percent >  0 {
-            estRemaining := time.Duration(100 * int(elapsed) / percent) - elapsed
+            estRemaining := time.Duration(100.0 / m) - elapsed
+            // estRemaining := time.Duration(100 * int(elapsed) / percent) - elapsed
             if estRemaining > 0 {
                 postfix = durationString(estRemaining)
             } else {
@@ -211,6 +243,8 @@ func progress(current, total, cols int, elapsed time.Duration) string {
         line = Bold(prefix) + bar_start + bar + bar_end + postfix
     }
 
+    prevPercent = percent
+    prevElapsed = elapsed
     os.Stdout.Write([]byte(line + "\r"))
     os.Stdout.Sync()
     return line
