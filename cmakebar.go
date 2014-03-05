@@ -28,6 +28,7 @@ import (
     "os"
     "regexp"
     "runtime"
+    "sort"
     "strconv"
     "strings"
     "syscall"
@@ -46,7 +47,8 @@ var logOutput, showEst, showHelp, replay bool
 var ema float64
 var prevPercent int
 var prevElapsed time.Duration
-var speeds [100]float64
+var speeds [101]float64
+var medianSpeed float64
 
 func init() {
     flag.BoolVar(&showHelp, "help", false, "show help")
@@ -202,20 +204,26 @@ func calcEMASpeed(percent int, elapsed time.Duration) float64 {
     // m_e : exponential moving average
     // m_t : current rate of change or speed
     mt := float64(percent - prevPercent) / float64(elapsed - prevElapsed)
-    // fmt.Println("percent:", percent, "prevPercent:", prevPercent)
     ema = SMOOTHING_FACTOR * mt + (1 - SMOOTHING_FACTOR) * ema
     return ema
 }
 
 func calcMedianSpeed(percent int, elapsed time.Duration) float64 {
     if percent == prevPercent {
-        return ema
+        return medianSpeed
     }
     mt := float64(percent - prevPercent) / float64(elapsed - prevElapsed)
     speeds[percent] = mt
-    // fmt.Println("percent:", percent, "prevPercent:", prevPercent)
     // calc median of mt
-    return 0
+    speedsorted := speeds // copy, don't sort original array
+    sort.Float64s(speedsorted[:])
+    for i, v := range speedsorted {
+        if v > 0 {
+            medianSpeed = speedsorted[ i + (len(speedsorted) - i) / 2 ]
+            break;
+        }
+    }
+    return medianSpeed
 }
 
 func progress(current, total, cols int, elapsed time.Duration) string {
@@ -226,13 +234,12 @@ func progress(current, total, cols int, elapsed time.Duration) string {
     bar_start := " ["
     bar_end := "] "
     m := calcLinearAverageSpeed(percent, elapsed)
-    // m := calcEMASpeed(percent, elapsed)
-    // fmt.Println("mLin:", m)
-    // fmt.Println("mEma:", m2)
+    // fmt.Println("ls:", m)
+    // m = calcMedianSpeed(percent, elapsed)
+    // fmt.Println("ms:", m)
     if showEst {
         if percent >  0 {
             estRemaining := time.Duration(100.0 / m) - elapsed
-            // estRemaining := time.Duration(100 * int(elapsed) / percent) - elapsed
             if estRemaining > 0 {
                 postfix = durationString(estRemaining)
             } else {
