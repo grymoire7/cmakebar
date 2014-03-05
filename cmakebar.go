@@ -43,9 +43,10 @@ const (
 
 var logFile string
 var logOutput, showEst, showHelp, replay bool
-var ema float32
+var ema float64
 var prevPercent int
 var prevElapsed time.Duration
+var speeds [100]float64
 
 func init() {
     flag.BoolVar(&showHelp, "help", false, "show help")
@@ -183,15 +184,15 @@ func durationString(d time.Duration) string {
     return f
 }
 
-func calcLinearAverageSpeed(percent int, elapsed time.Duration) float32 {
-    return float32(percent) / float32(elapsed)
+func calcLinearAverageSpeed(percent int, elapsed time.Duration) float64 {
+    return float64(percent) / float64(elapsed)
 }
 
 // EMA = Exponential Moving Average
 // TODO: This is horrible estimate. It's probably better to keep an array
 // of 100 m values and return the median. Or at least weight the EMA against
 // the moving median.
-func calcEMASpeed(percent int, elapsed time.Duration) float32 {
+func calcEMASpeed(percent int, elapsed time.Duration) float64 {
     if percent == prevPercent {
         return ema
     }
@@ -200,15 +201,26 @@ func calcEMASpeed(percent int, elapsed time.Duration) float32 {
     // SF : smothing factor where 0 < SF < 1
     // m_e : exponential moving average
     // m_t : current rate of change or speed
-    mt := float32(percent - prevPercent) / float32(elapsed - prevElapsed)
+    mt := float64(percent - prevPercent) / float64(elapsed - prevElapsed)
     // fmt.Println("percent:", percent, "prevPercent:", prevPercent)
     ema = SMOOTHING_FACTOR * mt + (1 - SMOOTHING_FACTOR) * ema
     return ema
 }
 
+func calcMedianSpeed(percent int, elapsed time.Duration) float64 {
+    if percent == prevPercent {
+        return ema
+    }
+    mt := float64(percent - prevPercent) / float64(elapsed - prevElapsed)
+    speeds[percent] = mt
+    // fmt.Println("percent:", percent, "prevPercent:", prevPercent)
+    // calc median of mt
+    return 0
+}
+
 func progress(current, total, cols int, elapsed time.Duration) string {
     var line string
-    percent := int(100.0 * float32(current) / float32(total))
+    percent := int(100.0 * float64(current) / float64(total))
     prefix := fmt.Sprintf(" %d%%", percent)
     postfix := durationString(elapsed)
     bar_start := " ["
@@ -230,7 +242,7 @@ func progress(current, total, cols int, elapsed time.Duration) string {
     }
 
     bar_size := cols - len(prefix + bar_start + bar_end + postfix)
-    amount := int(float32(current) / (float32(total) / float32(bar_size)))
+    amount := int(float64(current) / (float64(total) / float64(bar_size)))
     remain := bar_size - amount
 
     // try to degrade nicely for small cols
