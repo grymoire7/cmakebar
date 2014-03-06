@@ -39,7 +39,7 @@ import (
 
 const (
     DEFAULT_WIDTH = 20 // it should never come to this
-    SMOOTHING_FACTOR = 0.5
+    SMOOTHING_FACTOR = 0.7
 )
 
 var logFile string
@@ -208,6 +208,7 @@ func calcEMASpeed(percent int, elapsed time.Duration) float64 {
     return ema
 }
 
+
 func calcMedianSpeed(percent int, elapsed time.Duration) float64 {
     if percent == prevPercent {
         return medianSpeed
@@ -233,10 +234,12 @@ func progress(current, total, cols int, elapsed time.Duration) string {
     postfix := durationString(elapsed)
     bar_start := " ["
     bar_end := "] "
-    m := calcLinearAverageSpeed(percent, elapsed)
-    // fmt.Println("ls:", m)
-    // m = calcMedianSpeed(percent, elapsed)
-    // fmt.Println("ms:", m)
+    // m := calcLinearAverageSpeed(percent, elapsed)
+    m := calcMedianSpeed(percent, elapsed)
+    if percent != prevPercent {
+        prevPercent = percent
+        prevElapsed = elapsed
+    }
     if showEst {
         if percent >  0 {
             estRemaining := time.Duration(100.0 / m) - elapsed
@@ -262,8 +265,6 @@ func progress(current, total, cols int, elapsed time.Duration) string {
         line = Bold(prefix) + bar_start + bar + bar_end + postfix
     }
 
-    prevPercent = percent
-    prevElapsed = elapsed
     os.Stdout.Write([]byte(line + "\r"))
     os.Stdout.Sync()
     return line
