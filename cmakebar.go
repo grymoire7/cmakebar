@@ -43,7 +43,7 @@ const (
 )
 
 var logFile string
-var logOutput, showEst, showHelp, replay bool
+var logOutput, showEst, showHelp, replay, noStyle bool
 var ema float64
 var prevPercent int
 var prevElapsed time.Duration
@@ -57,6 +57,8 @@ func init() {
     flag.BoolVar(&replay, "r", false, "add sleep delays for replay (shortcut)")
     flag.BoolVar(&showEst, "est", false, "show estimated time remaining")
     flag.BoolVar(&showEst, "e", false, "show estimated time remaining (shortcut")
+    flag.BoolVar(&noStyle, "no-style", false, "turn off colors and bold")
+    flag.BoolVar(&noStyle, "ns", false, "turn off colors/bold (shortcut)")
     flag.StringVar(&logFile, "out", "", "log to file name")
 }
 
@@ -155,15 +157,24 @@ Options:
 
 
 func Bold(str string) string {
+    if (noStyle) {
+        return str
+    } 
     return "\033[1m" + str + "\033[0m"
 }
 
-func HighlightDone(str string) string {
-    return "\033[46;1m" + str + "\033[0m"
+func HighlightDone(repeat int) string {
+    if (noStyle) {
+        return strings.Repeat("=", repeat)
+    } 
+    return "\033[46;1m" + strings.Repeat(" ", repeat) + "\033[0m"
 }
 
-func HighlightTodo(str string) string {
-    return "\033[47;1m" + str + "\033[0m"
+func HighlightTodo(repeat int) string {
+    if (noStyle) {
+        return strings.Repeat("-", repeat)
+    } 
+    return "\033[47;1m" + strings.Repeat(" ", repeat) + "\033[0m"
 }
 
 
@@ -261,7 +272,7 @@ func progress(current, total, cols int, elapsed time.Duration) string {
            line = prefix
        }
     } else {
-        bar := HighlightDone(strings.Repeat(" ", amount)) + HighlightTodo(strings.Repeat(" ", remain))
+        bar := HighlightDone(amount) + HighlightTodo(remain)
         line = Bold(prefix) + bar_start + bar + bar_end + postfix
     }
 
