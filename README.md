@@ -18,13 +18,15 @@ My local cmake script is called `build_technology`.  Your mileage may vary.
 
 ### Options:
     
-    -help=false   : show help
-    -est=false    : show estimated time remaining
-    -e=false      : show estimated time remaining (shortcut)
-    -out=""       : log to file name
-    -o=false      : log output to file [default: cmake.log]
-    -replay=false : add sleep delays for replay
-    -r=false      : add sleep delays for replay (shortcut)
+    -help=false    : show help
+    -est=false     : show estimated time remaining
+    -e=false       : show estimated time remaining (shortcut)
+    -no-style=false: turn off colors and bold
+    -ns=false      : turn off colors/bold (shortcut)
+    -out=""        : log to file name
+    -o=false       : log output to file [default: cmake.log]
+    -replay=false  : add sleep delays for replay
+    -r=false       : add sleep delays for replay (shortcut)
 
 
 ### Todo:
