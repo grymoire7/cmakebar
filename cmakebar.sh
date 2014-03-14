@@ -14,8 +14,6 @@
 #     cat cmake.log | cmakebar.sh -r
 #
 # Todo:
-#  [ ] Use non-blocking i/o, otherwise buffering pauses output
-#  [ ] Show errors at when finished
 #  [ ] Change timer resolution to remove days
 #  [ ] Change timer resolution to include fractional seconds
 #
@@ -118,19 +116,31 @@ progress()
 #
 printf "\n"
 
+isDone=false
+percentPat="^\[ *([0-9]+)%\]"
+failedPat="^Failed Modules"
 t=$(timer)
-grep -Eo '^\[ *[0-9]+%\]' | grep -Eo '[0-9]+' | while read i
+# grep -Eo '^\[ *[0-9]+%\]' | grep -Eo '[0-9]+' | while read i
+while read line
 do
-    prefix="howdy"
-    plen=${#prefix}
-    q=$(($i - $plen))
-    # printf "\n$q\n"
+    if [[ $line =~ $failedPat ]]; then
+        printf "\n\n\n"
+        isDone=true
+    fi
+    if $isDone; then
+        echo $line
+        continue
+    fi
+    if [[ ! $line =~ $percentPat ]]; then
+        continue
+    fi
+    i=${BASH_REMATCH[1]}
     elapsed=$(timer $t)
     prog=$(progress $i 100 $elapsed)
     printf "%s\r" "$prog"
-    sleep 0.01
+    # sleep 0.01
 done
 
-printf "\n\nDone.\n\n"
+printf "\nDone.\n\n"
 
 
