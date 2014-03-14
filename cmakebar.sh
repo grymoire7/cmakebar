@@ -15,7 +15,7 @@
 #
 # Todo:
 #  [ ] Use non-blocking i/o, otherwise buffering pauses output
-#  [ ] Allow spaces in bar
+#  [ ] Show errors at when finished
 #  [ ] Change timer resolution to remove days
 #  [ ] Change timer resolution to include fractional seconds
 #
@@ -103,11 +103,11 @@ progress()
     bar_size=$(($TWIDTH - ${#prefix} - ${#bar_start} - ${#bar_end} - ${#postfix}))
     amount=$(( bar_size * current / total ))
     remain=$(( bar_size - amount ))
-    amount_bar=$(repeat "_"  $amount)
-    remain_bar=$(repeat "_"  $remain)
+    amount_bar=$(repeat " "  $amount)
+    remain_bar=$(repeat " "  $remain)
     prefix_s=" $(bold $prefix)"
-    amount_bar_s=$(highlightDone $amount_bar)
-    remain_bar_s=$(highlightTodo $remain_bar)
+    amount_bar_s=$(highlightDone "$amount_bar")
+    remain_bar_s=$(highlightTodo "$remain_bar")
 
     printf "%s%s%s%s%s%s" "$prefix_s" "$bar_start" "$amount_bar_s" "$remain_bar_s" "$bar_end" "$postfix"
 }
@@ -116,6 +116,8 @@ progress()
 ###############################################################################
 # Main
 #
+printf "\n"
+
 t=$(timer)
 grep -Eo '^\[ *[0-9]+%\]' | grep -Eo '[0-9]+' | while read i
 do
@@ -129,6 +131,6 @@ do
     sleep 0.01
 done
 
-printf "\nDone.\n"
+printf "\n\nDone.\n\n"
 
 
