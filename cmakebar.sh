@@ -12,6 +12,7 @@
 #     build_technology make 2>&1 | cmakebar.sh -ro cmake.log
 #     build_technology make 2>&1 | cmakebar.sh -l
 #     build_technology make 2>&1 | cmakebar.sh -rl
+#     build_technology make 2>&1 | cmakebar.sh -s blocky
 #     cat cmake.log | cmakebar.sh
 #
 # Todo:
@@ -24,6 +25,10 @@
 # Date:   Spring 2014
 
 TWIDTH=`tput cols`
+highlightDoneBegin="\033[46;1m"
+highlightTodoBegin="\033[47;1m"
+doneChar=" "
+todoChar=" "
 
 usage()
 {
@@ -36,6 +41,7 @@ Options: $0 [-h | -o cmake.log | -l | -r ]
               Otherwise append if it exists
     -l        Log to cmake.log
     -o file   Log to named file
+    -s style  One of: normal, blocky, pointy, happy
 
 Usage:
 
@@ -69,12 +75,12 @@ bold()
 
 highlightDone()
 {
-    printf "\033[46;1m%s\033[0m" "$1"
+    printf "$highlightDoneBegin%s\033[0m" "$1"
 }
 
 highlightTodo()
 {
-    printf "\033[47;1m%s\033[0m" "$1"
+    printf "$highlightTodoBegin%s\033[0m" "$1"
 }
 
 
@@ -159,8 +165,8 @@ progress()
     bar_size=$(($TWIDTH - ${#prefix} - ${#bar_start} - ${#bar_end} - ${#postfix}))
     amount=$(( bar_size * current / total ))
     remain=$(( bar_size - amount ))
-    amount_bar=$(repeat " "  $amount)
-    remain_bar=$(repeat " "  $remain)
+    amount_bar=$(repeat "$doneChar"  $amount)
+    remain_bar=$(repeat "$todoChar"  $remain)
     prefix_s=" $(bold $prefix)"
     amount_bar_s=$(highlightDone "$amount_bar")
     remain_bar_s=$(highlightTodo "$remain_bar")
@@ -176,7 +182,7 @@ logfile=""
 rmlogfile=false
 
 # get options
-while getopts "rhlo:" flag; do
+while getopts "rhlo:s:" flag; do
     case $flag in
         h)
             usage
@@ -191,6 +197,30 @@ while getopts "rhlo:" flag; do
         l)
             logfile="cmake.log"
             echo "Loging to $logfile."
+            ;;
+        s)
+            case $OPTARG in
+                blocky)
+                    doneChar="▣"
+                    todoChar="□"
+                    highlightDoneBegin="\033[34;1m"
+                    highlightTodoBegin="\033[37;0m"
+                    ;;
+                pointy)
+                    doneChar="▶"
+                    todoChar="▷"
+                    highlightDoneBegin="\033[32;1m"
+                    highlightTodoBegin="\033[37;0m"
+                    ;;
+                happy)
+                    doneChar="☻"
+                    todoChar="☹"
+                    highlightDoneBegin="\033[33;1m"
+                    highlightTodoBegin="\033[37;0m"
+                    ;;
+                \?)
+                    ;;
+            esac
             ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
