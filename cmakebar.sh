@@ -16,10 +16,19 @@
 #     cat cmake.log | cmakebar.sh
 #
 # Todo:
-#   [ ] See if there's a faster way than read -r line
-#       Bash version processes a.log in 8s
-#       Go   version processes a.log in 83ms
-#       This could be dwarfed by cmake live times, but still...
+#   [ ] Something is making this slow...
+#
+#           Go   version processes a.log in 83ms, b.log in 467ms
+#           This version processes a.log in 8s, b.log in 46s
+#
+#       Inlined progress() which helped a bit.
+#
+#           This version processes a.log in 7s, b.log in 41s
+#
+#       Not calling timer/date in the inner loop processes b.log in 28s.
+#       Of course, we need the timer.
+#
+#       In practice, this could be dwarfed by i/o latency on stdin.
 #
 # Author: Tracy Atteberry
 # Date:   Spring 2014
@@ -29,6 +38,8 @@ highlightDoneBegin="\033[46;1m"
 highlightTodoBegin="\033[47;1m"
 doneChar=" "
 todoChar=" "
+bar_start=" ["
+bar_end="] "
 
 usage()
 {
@@ -68,21 +79,6 @@ repeat()
     printf "$1"'%.0s' $(eval "echo {1.."$(($2))"}");
 } 
 
-bold()
-{
-    printf "\033[1m%s\033[0m" "$1"
-}
-
-highlightDone()
-{
-    printf "$highlightDoneBegin%s\033[0m" "$1"
-}
-
-highlightTodo()
-{
-    printf "$highlightTodoBegin%s\033[0m" "$1"
-}
-
 
 # Elapsed time.  Usage:
 #
@@ -103,7 +99,7 @@ highlightTodo()
 # times less than a minute.
 #
 # ---
-# Un-updated to not track nanoseconds until thing move fast enough
+# Un-updated to not track nanoseconds until things move fast enough
 # for it matter.
 #
 timer()
@@ -145,6 +141,11 @@ timer()
 }
 
 
+# The following four functions are unused.
+# They've been inlined for performance reasons.
+bold() { printf "\033[1m%s\033[0m" "$1"; }
+highlightDone() { printf "$highlightDoneBegin%s\033[0m" "$1"; }
+highlightTodo() { printf "$highlightTodoBegin%s\033[0m" "$1"; }
 
 # Usage: progress current total elapsed
 #    current  is the current amount done of total (int)
@@ -155,13 +156,10 @@ progress()
     current=$1
     total=$2
     elapsed="$3 "
-    bar_start=" ["
-    bar_end="] "
 
     percent=$((100 * current / total ))
     printf -v prefix " $percent%%"
-    # printf -v postfix "$elapsed"
-    postfix=$elapsed
+    printf -v postfix "$elapsed"
     bar_size=$(($TWIDTH - ${#prefix} - ${#bar_start} - ${#bar_end} - ${#postfix}))
     amount=$(( bar_size * current / total ))
     remain=$(( bar_size - amount ))
@@ -238,12 +236,6 @@ if [ ! -z "$logfile" ]; then
     fi
 fi
 
-# # DEBUG
-# if [ -z "$logfile" ]; then
-#     echo "Logging is off."
-# fi
-# exit 1
-
 printf "\n"
 
 isDone=false
@@ -273,8 +265,21 @@ do
     i=${BASH_REMATCH[1]}
 
     elapsed=$(timer $t)
-    prog=$(progress $i 100 $elapsed)
-    printf "%s\r" "$prog"
+    # prog=$(progress $i 100 $elapsed)
+
+    # ---- inlined progress() below
+    prefix=" $i%"
+    postfix="$elapsed "
+    bar_size=$(($TWIDTH - ${#prefix} - ${#bar_start} - ${#bar_end} - ${#postfix}))
+    amount_bar=$(repeat "$doneChar" $(( bar_size * i / 100 )))
+    remain_bar=$(repeat "$todoChar" $(( bar_size * (100 - i) / 100  )))
+    prefix_s=$(printf "\033[1m%s\033[0m" "$prefix")
+    amount_bar_s=$(printf "$highlightDoneBegin%s\033[0m" "$amount_bar")
+    remain_bar_s=$(printf "$highlightTodoBegin%s\033[0m" "$remain_bar")
+    printf "%s%s%s%s%s%s\r" "$prefix_s" "$bar_start" "$amount_bar_s" "$remain_bar_s" "$bar_end" "$postfix"
+    # ---- inlined progress() above
+
+    # printf "%s\r" "$prog"
 done
 
 printf "\nDone. $elapsed\n\n"
